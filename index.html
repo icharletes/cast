@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🇨🇱 Canales Chile - Chromecast</title>
+
+  <!-- Google Cast SDK -->
+  <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+  <!-- HLS.js para reproducir streams .m3u8 en el navegador -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #f1f5f9;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    h1 { font-size: 1.8rem; }
+    h1 span { color: #e11d48; }
+
+    .cast-area {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: #1e293b;
+      padding: 0.5rem 1rem;
+      border-radius: 12px;
+      border: 1px solid #334155;
+    }
+    .cast-status {
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+    .cast-status.connected { color: #22c55e; }
+    google-cast-launcher {
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+    }
+
+    .player-container {
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 2rem;
+      aspect-ratio: 16/9;
+      max-width: 900px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .player-placeholder {
+      color: #64748b;
+      font-size: 1.2rem;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .channels-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 1rem;
+      max-width: 900px;
+    }
+    .channel-card {
+      background: #1e293b;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      padding: 1.5rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .channel-card:hover {
+      background: #334155;
+      transform: translateY(-2px);
+    }
+    .channel-card.active {
+      border-color: #e11d48;
+      background: #334155;
+    }
+    .channel-logo {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .channel-name {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .channel-number {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-top: 0.25rem;
+    }
+
+    .controls {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      max-width: 900px;
+    }
+    .btn {
+      background: #334155;
+      color: white;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #475569; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-cast {
+      background: #e11d48;
+    }
+    .btn-cast:hover { background: #be123c; }
+
+    footer {
+      margin-top: 3rem;
+      color: #64748b;
+      font-size: 0.8rem;
+      max-width: 900px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📺 Canales <span>Chile</span></h1>
+    <div class="cast-area">
+      <span class="cast-status" id="castStatus">Sin conexión</span>
+      <google-cast-launcher id="castButton"></google-cast-launcher>
+    </div>
+  </header>
+
+  <div class="player-container">
+    <video id="video" controls playsinline></video>
+    <div class="player-placeholder" id="placeholder">
+      Selecciona un canal para comenzar
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="btnPlay" disabled>▶ Reproducir</button>
+    <button class="btn" id="btnStop" disabled>⏹ Detener</button>
+    <button class="btn btn-cast" id="btnCast">📡 Enviar a Chromecast</button>
+  </div>
+
+  <div class="channels-grid" id="channelsGrid"></div>
+
+  <footer>
+    <p>⚠️ Usa solo streams con autorización legal. Los streams de ejemplo son de fuentes públicas.</p>
+    <p>Requiere HTTPS para Chromecast (usa Netlify, Vercel o GitHub Pages).</p>
+  </footer>
+
+  <script>
+    // ===== CONFIGURACIÓN DE CANALES =====
+    // Reemplaza estas URLs con streams HLS (.m3u8) autorizados.
+    // Fuentes comunes: repositorios IPTV abiertos (iptv-org/iptv) o streams oficiales.
+    const CANALES = [
+      { nombre: 'TVN',          numero: '7',  logo: '🔴', url: 'https://unlimited1-us.dps.live/tvn/tvnhd.smil/playlist.m3u8' },
+      { nombre: 'Mega',         numero: '9',  logo: '🔵', url: 'https://unlimited1-us.dps.live/mega/megahd.smil/playlist.m3u8' },
+      { nombre: 'Chilevisión',  numero: '11', logo: '🟡', url: 'https://unlimited1-us.dps.live/chv/chvhd.smil/playlist.m3u8' },
+      { nombre: 'Canal 13',     numero: '13', logo: '🟢', url: 'https://unlimited1-us.dps.live/canal13/canal13hd.smil/playlist.m3u8' },
+      { nombre: 'La Red',       numero: '4',  logo: '🟣', url: 'https://unlimited1-us.dps.live/lared/laredhd.smil/playlist.m3u8' },
+      { nombre: 'TVN Noticias', numero: '—',  logo: '📰', url: 'https://unlimited1-us.dps.live/tvnnoticias/tvnnoticias.smil/playlist.m3u8' },
+    ];
+
+    // ===== ESTADO =====
+    let canalActivo = null;
+    let hls = null;
+    let castSession = null;
+    const video = document.getElementById('video');
+    const placeholder = document.getElementById('placeholder');
+    const btnPlay = document.getElementById('btnPlay');
+    const btnStop = document.getElementById('btnStop');
+    const btnCast = document.getElementById('btnCast');
+    const castStatus = document.getElementById('castStatus');
+
+    // ===== RENDERIZAR CANALES =====
+    const grid = document.getElementById('channelsGrid');
+    CANALES.forEach((canal, index) => {
+      const card = document.createElement('div');
+      card.className = 'channel-card';
+      card.innerHTML = `
+        <div class="channel-logo">${canal.logo}</div>
+        <div class="channel-name">${canal.nombre}</div>
+        <div class="channel-number">Canal ${canal.numero}</div>
+      `;
+      card.onclick = () => seleccionarCanal(index, card);
+      grid.appendChild(card);
+    });
+
+    function seleccionarCanal(index, card) {
+      document.querySelectorAll('.channel-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      canalActivo = CANALES[index];
+      btnPlay.disabled = false;
+      btnCast.disabled = false;
+    }
+
+    // ===== REPRODUCTOR LOCAL (HLS) =====
+    function reproducirLocal() {
+      if (!canalActivo) return;
+      placeholder.style.display = 'none';
+      video.style.display = 'block';
+
+      if (hls) hls.destroy();
+
+      if (Hls.isSupported()) {
+        hls = new Hls();
+        hls.loadSource(canalActivo.url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = canalActivo.url;
+        video.play().catch(() => {});
+      }
+      btnStop.disabled = false;
+    }
+
+    function detenerLocal() {
+      if (hls) { hls.destroy(); hls = null; }
+      video.pause();
+      video.src = '';
+      video.style.display = 'none';
+      placeholder.style.display = 'block';
+      btnStop.disabled = true;
+      btnPlay.disabled = !canalActivo;
+    }
+
+    btnPlay.onclick = reproducirLocal;
+    btnStop.onclick = detenerLocal;
+
+    // ===== GOOGLE CAST =====
+    window['__onGCastApiAvailable'] = function(isAvailable) {
+      if (isAvailable) inicializarCast();
+    };
+
+    function inicializarCast() {
+      const context = cast.framework.CastContext.getInstance();
+      context.setOptions({
+        receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+        autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+      });
+
+      context.addEventListener(
+        cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
+        (event) => {
+          switch (event.sessionState) {
+            case cast.framework.SessionState.SESSION_STARTED:
+              castSession = context.getCurrentSession();
+              castStatus.textContent = '✓ Conectado';
+              castStatus.classList.add('connected');
+              break;
+            case cast.framework.SessionState.SESSION_ENDED:
+              castSession = null;
+              castStatus.textContent = 'Sin conexión';
+              castStatus.classList.remove('connected');
+              break;
+          }
+        }
+      );
+    }
+
+    btnCast.onclick = function() {
+      if (!canalActivo) {
+        alert('Selecciona un canal primero');
+        return;
+      }
+      if (!castSession) {
+        alert('Conecta tu Chromecast con el botón del encabezado');
+        return;
+      }
+
+      const mediaInfo = new chrome.cast.media.MediaInfo(canalActivo.url, 'application/x-mpegurl');
+      const metadata = new chrome.cast.media.GenericMediaMetadata();
+      metadata.title = canalActivo.nombre;
+      metadata.subtitle = `Canal ${canalActivo.numero}`;
+      mediaInfo.metadata = metadata;
+
+      const request = new chrome.cast.media.LoadRequest(mediaInfo);
+      castSession.loadMedia(request).then(
+        () => console.log(`📡 Transmitiendo: ${canalActivo.nombre}`),
+        (err) => console.error('Error:', err)
+      );
+    };
+  </script>
+</body>
+</html>
