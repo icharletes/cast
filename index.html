@@ -7,11 +7,12 @@
 
   <!-- Google Cast SDK -->
   <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
-  <!-- HLS.js para reproducir streams .m3u8 en el navegador -->
+  <!-- HLS.js para reproducir streams .m3u8 -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; } /* Scroll suave nativo como respaldo */
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -57,6 +58,8 @@
       align-items: center;
       justify-content: center;
       border: 1px solid #334155;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      scroll-margin-top: 20px; /* Espacio al hacer scrollIntoView */
     }
     video { width: 100%; height: 100%; display: none; }
     .player-placeholder {
@@ -76,13 +79,13 @@
       background: #1e293b;
       color: white;
       font-size: 1rem;
-      display: none; /* Se muestra al cargar */
+      display: none;
     }
     .search-box:focus { outline: 2px solid #e11d48; border-color: transparent; }
 
     .channels-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
       gap: 1rem;
       max-width: 900px;
       margin: 0 auto;
@@ -101,7 +104,7 @@
       gap: 0.5rem;
     }
     .channel-card:hover { background: #334155; transform: translateY(-2px); }
-    .channel-card.active { border-color: #e11d48; background: #334155; }
+    .channel-card.active { border-color: #e11d48; background: #334155; box-shadow: 0 0 15px rgba(225, 29, 72, 0.3); }
     
     .channel-logo {
       width: 64px;
@@ -139,6 +142,8 @@
     .btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-cast { background: #e11d48; }
     .btn-cast:hover { background: #be123c; }
+    .btn-stop { background: #dc2626; }
+    .btn-stop:hover { background: #b91c1c; }
 
     .loading { text-align: center; padding: 3rem; color: #94a3b8; grid-column: 1 / -1; }
     .error { text-align: center; padding: 2rem; color: #f87171; background: #450a0a; border-radius: 8px; grid-column: 1 / -1; }
@@ -164,16 +169,16 @@
     </div>
   </header>
 
-  <div class="player-container">
+  <!-- Se le agregó un ID para poder referenciarlo en el scroll -->
+  <div class="player-container" id="playerContainer">
     <video id="video" controls playsinline></video>
     <div class="player-placeholder" id="placeholder">
-      Selecciona un canal de la lista para comenzar
+      Haz clic en un canal para reproducir automáticamente
     </div>
   </div>
 
   <div class="controls">
-    <button class="btn" id="btnPlay" disabled>▶ Reproducir aquí</button>
-    <button class="btn" id="btnStop" disabled>⏹ Detener</button>
+    <button class="btn btn-stop" id="btnStop" disabled>⏹ Detener</button>
     <button class="btn btn-cast" id="btnCast" disabled>📡 Enviar a Chromecast</button>
   </div>
 
@@ -197,7 +202,7 @@
 
     const video = document.getElementById('video');
     const placeholder = document.getElementById('placeholder');
-    const btnPlay = document.getElementById('btnPlay');
+    const playerContainer = document.getElementById('playerContainer'); // Referencia al contenedor
     const btnStop = document.getElementById('btnStop');
     const btnCast = document.getElementById('btnCast');
     const castStatus = document.getElementById('castStatus');
@@ -211,12 +216,11 @@
         if (!response.ok) throw new Error('Error en la red');
         const data = await response.json();
 
-        // Filtrar: Solo Chile ('cl') y que tengan señal tipo 'm3u8' (compatible con Chromecast)
+        // Filtrar: Solo Chile ('cl') y que tengan señal tipo 'm3u8'
         todosLosCanales = data.channels
           .filter(c => c.country === 'cl' && c.signals && c.signals.some(s => s.type === 'm3u8'))
           .map(c => {
             const señalM3u8 = c.signals.find(s => s.type === 'm3u8');
-            // Fallback de logo: usa ui-avatars si no hay logo
             const logoUrl = c.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=e11d48&color=fff&size=128&font-size=0.4`;
             
             return {
@@ -227,9 +231,7 @@
             };
           });
 
-        // Ordenar alfabéticamente
         todosLosCanales.sort((a, b) => a.nombre.localeCompare(b.nombre));
-
         searchInput.style.display = 'block';
         renderizarCanales(todosLosCanales);
 
@@ -248,7 +250,7 @@
         return;
       }
 
-      canales.forEach((canal, index) => {
+      canales.forEach((canal) => {
         const card = document.createElement('div');
         card.className = 'channel-card';
         card.innerHTML = `
@@ -256,7 +258,7 @@
           <div class="channel-name">${canal.nombre}</div>
           <div class="channel-cat">${canal.categoria}</div>
         `;
-        card.onclick = () => seleccionarCanal(canal, card);
+        card.onclick = () => seleccionarYReproducir(canal, card);
         grid.appendChild(card);
       });
     }
@@ -268,61 +270,68 @@
       renderizarCanales(filtrados);
     });
 
-    // ===== 4. LÓGICA DE SELECCIÓN Y REPRODUCCIÓN =====
-    function seleccionarCanal(canal, cardElement) {
+    // ===== 4. LÓGICA DE SELECCIÓN Y REPRODUCCIÓN AUTOMÁTICA =====
+    function seleccionarYReproducir(canal, cardElement) {
       document.querySelectorAll('.channel-card').forEach(c => c.classList.remove('active'));
       cardElement.classList.add('active');
       
       canalActivo = canal;
-      btnPlay.disabled = false;
       btnCast.disabled = false;
       
-      // Scroll suave hacia el reproductor en móviles
-      if (window.innerWidth < 768) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    }
+      // 🚀 SCROLL AUTOMÁTICO SUAVE HACIA EL REPRODUCTOR
+      playerContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-    function reproducirLocal() {
-      if (!canalActivo) return;
+      // Mostrar video, ocultar placeholder
       placeholder.style.display = 'none';
       video.style.display = 'block';
 
-      if (hls) hls.destroy();
+      // Destruir instancia anterior de HLS si existe
+      if (hls) {
+        hls.destroy();
+        hls = null;
+      }
 
+      // Cargar y reproducir nuevo stream
       if (Hls.isSupported()) {
-        hls = new Hls();
-        hls.loadSource(canalActivo.url);
+        hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+        });
+        hls.loadSource(canal.url);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play().catch(e => console.log("Autoplay bloqueado por el navegador:", e));
+          video.play().catch(e => console.log("Autoplay bloqueado por el navegador (interacción requerida):", e));
         });
         hls.on(Hls.Events.ERROR, (event, data) => {
           if (data.fatal) {
             console.error("Error fatal de HLS:", data);
-            placeholder.style.display = 'block';
-            video.style.display = 'none';
-            alert("Este canal no está disponible temporalmente o bloquea la reproducción externa.");
+            detenerReproduccion();
+            alert(`⚠️ El canal "${canal.nombre}" no está disponible temporalmente o bloquea la reproducción externa.`);
           }
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = canalActivo.url;
+        // Fallback para Safari nativo
+        video.src = canal.url;
         video.play().catch(e => console.log("Autoplay bloqueado:", e));
       }
+      
       btnStop.disabled = false;
     }
 
-    function detenerLocal() {
-      if (hls) { hls.destroy(); hls = null; }
+    function detenerReproduccion() {
+      if (hls) { 
+        hls.destroy(); 
+        hls = null; 
+      }
       video.pause();
-      video.src = '';
+      video.removeAttribute('src'); // Limpia la fuente
+      video.load(); // Resetea el elemento de video
       video.style.display = 'none';
       placeholder.style.display = 'block';
       btnStop.disabled = true;
     }
 
-    btnPlay.onclick = reproducirLocal;
-    btnStop.onclick = detenerLocal;
+    btnStop.onclick = detenerReproduccion;
 
     // ===== 5. GOOGLE CAST SDK =====
     window['__onGCastApiAvailable'] = function(isAvailable) {
@@ -349,7 +358,6 @@
               castSession = null;
               castStatus.textContent = 'Sin conexión';
               castStatus.classList.remove('connected');
-              detenerLocal(); // Detener local si se desconecta el cast
               break;
           }
         }
@@ -370,7 +378,6 @@
       const metadata = new chrome.cast.media.GenericMediaMetadata();
       metadata.title = canalActivo.nombre;
       metadata.subtitle = `Categoría: ${canalActivo.categoria}`;
-      // Opcional: si el canal tiene logo, se puede pasar a metadata.imageUrl
       mediaInfo.metadata = metadata;
 
       const request = new chrome.cast.media.LoadRequest(mediaInfo);
@@ -378,7 +385,7 @@
       castSession.loadMedia(request).then(
         () => {
           console.log(`📡 Transmitiendo: ${canalActivo.nombre}`);
-          detenerLocal(); // Pausar el local para ahorrar recursos
+          detenerReproduccion(); // Ahorra ancho de banda local al enviar al TV
         },
         (err) => {
           console.error('Error al enviar a Chromecast:', err);
