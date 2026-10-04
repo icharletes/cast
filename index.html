@@ -13,137 +13,149 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
       color: #f1f5f9;
       min-height: 100vh;
-      padding: 2rem;
+      padding: 1.5rem;
     }
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
       flex-wrap: wrap;
       gap: 1rem;
     }
-    h1 { font-size: 1.8rem; }
+    h1 { font-size: 1.5rem; }
     h1 span { color: #e11d48; }
 
     .cast-area {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 0.75rem;
       background: #1e293b;
       padding: 0.5rem 1rem;
       border-radius: 12px;
       border: 1px solid #334155;
     }
-    .cast-status {
-      font-size: 0.85rem;
-      color: #94a3b8;
-    }
-    .cast-status.connected { color: #22c55e; }
-    google-cast-launcher {
-      width: 36px;
-      height: 36px;
-      cursor: pointer;
-    }
+    .cast-status { font-size: 0.85rem; color: #94a3b8; }
+    .cast-status.connected { color: #22c55e; font-weight: 600; }
+    google-cast-launcher { width: 32px; height: 32px; cursor: pointer; }
 
     .player-container {
       background: #000;
       border-radius: 12px;
       overflow: hidden;
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
       aspect-ratio: 16/9;
       max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
+      border: 1px solid #334155;
     }
-    video {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
+    video { width: 100%; height: 100%; display: none; }
     .player-placeholder {
       color: #64748b;
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       text-align: center;
       padding: 2rem;
     }
 
+    .search-box {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto 1.5rem auto;
+      padding: 0.8rem 1rem;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: white;
+      font-size: 1rem;
+      display: none; /* Se muestra al cargar */
+    }
+    .search-box:focus { outline: 2px solid #e11d48; border-color: transparent; }
+
     .channels-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
       gap: 1rem;
       max-width: 900px;
+      margin: 0 auto;
     }
     .channel-card {
       background: #1e293b;
       border: 2px solid transparent;
       border-radius: 12px;
-      padding: 1.5rem 1rem;
+      padding: 1rem;
       text-align: center;
       cursor: pointer;
       transition: all 0.2s;
-      user-select: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
     }
-    .channel-card:hover {
-      background: #334155;
-      transform: translateY(-2px);
-    }
-    .channel-card.active {
-      border-color: #e11d48;
-      background: #334155;
-    }
+    .channel-card:hover { background: #334155; transform: translateY(-2px); }
+    .channel-card.active { border-color: #e11d48; background: #334155; }
+    
     .channel-logo {
-      font-size: 2.5rem;
-      margin-bottom: 0.5rem;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #0f172a;
+      border: 2px solid #334155;
     }
-    .channel-name {
-      font-weight: 600;
-      font-size: 1rem;
-    }
-    .channel-number {
-      font-size: 0.75rem;
-      color: #94a3b8;
-      margin-top: 0.25rem;
-    }
+    .channel-name { font-weight: 600; font-size: 0.95rem; line-height: 1.2; }
+    .channel-cat { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
 
     .controls {
       display: flex;
-      gap: 0.5rem;
-      margin-top: 1rem;
-      max-width: 900px;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
     }
     .btn {
       background: #334155;
       color: white;
       border: none;
-      padding: 0.6rem 1.2rem;
+      padding: 0.7rem 1.5rem;
       border-radius: 8px;
       cursor: pointer;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
+      font-weight: 500;
       transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
     .btn:hover { background: #475569; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-cast {
-      background: #e11d48;
-    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-cast { background: #e11d48; }
     .btn-cast:hover { background: #be123c; }
+
+    .loading { text-align: center; padding: 3rem; color: #94a3b8; grid-column: 1 / -1; }
+    .error { text-align: center; padding: 2rem; color: #f87171; background: #450a0a; border-radius: 8px; grid-column: 1 / -1; }
 
     footer {
       margin-top: 3rem;
+      text-align: center;
       color: #64748b;
       font-size: 0.8rem;
       max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
     }
   </style>
 </head>
 <body>
+
   <header>
     <h1>📺 Canales <span>Chile</span></h1>
     <div class="cast-area">
@@ -155,70 +167,122 @@
   <div class="player-container">
     <video id="video" controls playsinline></video>
     <div class="player-placeholder" id="placeholder">
-      Selecciona un canal para comenzar
+      Selecciona un canal de la lista para comenzar
     </div>
   </div>
 
   <div class="controls">
-    <button class="btn" id="btnPlay" disabled>▶ Reproducir</button>
+    <button class="btn" id="btnPlay" disabled>▶ Reproducir aquí</button>
     <button class="btn" id="btnStop" disabled>⏹ Detener</button>
-    <button class="btn btn-cast" id="btnCast">📡 Enviar a Chromecast</button>
+    <button class="btn btn-cast" id="btnCast" disabled>📡 Enviar a Chromecast</button>
   </div>
 
-  <div class="channels-grid" id="channelsGrid"></div>
+  <input type="text" id="searchInput" class="search-box" placeholder="🔍 Buscar canal por nombre...">
+
+  <div class="channels-grid" id="channelsGrid">
+    <div class="loading">Cargando canales desde la base de datos...</div>
+  </div>
 
   <footer>
-    <p>⚠️ Usa solo streams con autorización legal. Los streams de ejemplo son de fuentes públicas.</p>
-    <p>Requiere HTTPS para Chromecast (usa Netlify, Vercel o GitHub Pages).</p>
+    <p>⚠️ Esta app solo indexa señales públicas (HLS/m3u8). La disponibilidad depende del emisor original.</p>
+    <p>Requiere HTTPS para funcionar con Chromecast.</p>
   </footer>
 
   <script>
-    // ===== CONFIGURACIÓN DE CANALES =====
-    // Reemplaza estas URLs con streams HLS (.m3u8) autorizados.
-    // Fuentes comunes: repositorios IPTV abiertos (iptv-org/iptv) o streams oficiales.
-    const CANALES = [
-      { nombre: 'TVN',          numero: '7',  logo: '🔴', url: 'https://unlimited1-us.dps.live/tvn/tvnhd.smil/playlist.m3u8' },
-      { nombre: 'Mega',         numero: '9',  logo: '🔵', url: 'https://unlimited1-us.dps.live/mega/megahd.smil/playlist.m3u8' },
-      { nombre: 'Chilevisión',  numero: '11', logo: '🟡', url: 'https://unlimited1-us.dps.live/chv/chvhd.smil/playlist.m3u8' },
-      { nombre: 'Canal 13',     numero: '13', logo: '🟢', url: 'https://unlimited1-us.dps.live/canal13/canal13hd.smil/playlist.m3u8' },
-      { nombre: 'La Red',       numero: '4',  logo: '🟣', url: 'https://unlimited1-us.dps.live/lared/laredhd.smil/playlist.m3u8' },
-      { nombre: 'TVN Noticias', numero: '—',  logo: '📰', url: 'https://unlimited1-us.dps.live/tvnnoticias/tvnnoticias.smil/playlist.m3u8' },
-    ];
-
-    // ===== ESTADO =====
+    // ===== ESTADO GLOBAL =====
+    let todosLosCanales = [];
     let canalActivo = null;
     let hls = null;
     let castSession = null;
+
     const video = document.getElementById('video');
     const placeholder = document.getElementById('placeholder');
     const btnPlay = document.getElementById('btnPlay');
     const btnStop = document.getElementById('btnStop');
     const btnCast = document.getElementById('btnCast');
     const castStatus = document.getElementById('castStatus');
-
-    // ===== RENDERIZAR CANALES =====
     const grid = document.getElementById('channelsGrid');
-    CANALES.forEach((canal, index) => {
-      const card = document.createElement('div');
-      card.className = 'channel-card';
-      card.innerHTML = `
-        <div class="channel-logo">${canal.logo}</div>
-        <div class="channel-name">${canal.nombre}</div>
-        <div class="channel-number">Canal ${canal.numero}</div>
-      `;
-      card.onclick = () => seleccionarCanal(index, card);
-      grid.appendChild(card);
-    });
+    const searchInput = document.getElementById('searchInput');
 
-    function seleccionarCanal(index, card) {
-      document.querySelectorAll('.channel-card').forEach(c => c.classList.remove('active'));
-      card.classList.add('active');
-      canalActivo = CANALES[index];
-      btnPlay.disabled = false;
-      btnCast.disabled = false;
+    // ===== 1. CARGAR JSON DINÁMICAMENTE =====
+    async function cargarCanales() {
+      try {
+        const response = await fetch('https://raw.githubusercontent.com/Alplox/json-teles/refs/heads/main/channels.json');
+        if (!response.ok) throw new Error('Error en la red');
+        const data = await response.json();
+
+        // Filtrar: Solo Chile ('cl') y que tengan señal tipo 'm3u8' (compatible con Chromecast)
+        todosLosCanales = data.channels
+          .filter(c => c.country === 'cl' && c.signals && c.signals.some(s => s.type === 'm3u8'))
+          .map(c => {
+            const señalM3u8 = c.signals.find(s => s.type === 'm3u8');
+            // Fallback de logo: usa ui-avatars si no hay logo
+            const logoUrl = c.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=e11d48&color=fff&size=128&font-size=0.4`;
+            
+            return {
+              nombre: c.name,
+              url: señalM3u8.url,
+              logo: logoUrl,
+              categoria: c.category || 'general'
+            };
+          });
+
+        // Ordenar alfabéticamente
+        todosLosCanales.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+        searchInput.style.display = 'block';
+        renderizarCanales(todosLosCanales);
+
+      } catch (error) {
+        console.error('Error al cargar canales:', error);
+        grid.innerHTML = `<div class="error">❌ No se pudo cargar la lista de canales.<br>Verifica tu conexión a internet.</div>`;
+      }
     }
 
-    // ===== REPRODUCTOR LOCAL (HLS) =====
+    // ===== 2. RENDERIZAR CANALES =====
+    function renderizarCanales(canales) {
+      grid.innerHTML = '';
+      
+      if (canales.length === 0) {
+        grid.innerHTML = '<div class="loading">No se encontraron canales con ese nombre.</div>';
+        return;
+      }
+
+      canales.forEach((canal, index) => {
+        const card = document.createElement('div');
+        card.className = 'channel-card';
+        card.innerHTML = `
+          <img src="${canal.logo}" alt="${canal.nombre}" class="channel-logo" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(canal.nombre)}&background=334155&color=fff&size=128'">
+          <div class="channel-name">${canal.nombre}</div>
+          <div class="channel-cat">${canal.categoria}</div>
+        `;
+        card.onclick = () => seleccionarCanal(canal, card);
+        grid.appendChild(card);
+      });
+    }
+
+    // ===== 3. BÚSQUEDA EN TIEMPO REAL =====
+    searchInput.addEventListener('input', (e) => {
+      const termino = e.target.value.toLowerCase();
+      const filtrados = todosLosCanales.filter(c => c.nombre.toLowerCase().includes(termino));
+      renderizarCanales(filtrados);
+    });
+
+    // ===== 4. LÓGICA DE SELECCIÓN Y REPRODUCCIÓN =====
+    function seleccionarCanal(canal, cardElement) {
+      document.querySelectorAll('.channel-card').forEach(c => c.classList.remove('active'));
+      cardElement.classList.add('active');
+      
+      canalActivo = canal;
+      btnPlay.disabled = false;
+      btnCast.disabled = false;
+      
+      // Scroll suave hacia el reproductor en móviles
+      if (window.innerWidth < 768) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+
     function reproducirLocal() {
       if (!canalActivo) return;
       placeholder.style.display = 'none';
@@ -230,10 +294,20 @@
         hls = new Hls();
         hls.loadSource(canalActivo.url);
         hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play().catch(e => console.log("Autoplay bloqueado por el navegador:", e));
+        });
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            console.error("Error fatal de HLS:", data);
+            placeholder.style.display = 'block';
+            video.style.display = 'none';
+            alert("Este canal no está disponible temporalmente o bloquea la reproducción externa.");
+          }
+        });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = canalActivo.url;
-        video.play().catch(() => {});
+        video.play().catch(e => console.log("Autoplay bloqueado:", e));
       }
       btnStop.disabled = false;
     }
@@ -245,13 +319,12 @@
       video.style.display = 'none';
       placeholder.style.display = 'block';
       btnStop.disabled = true;
-      btnPlay.disabled = !canalActivo;
     }
 
     btnPlay.onclick = reproducirLocal;
     btnStop.onclick = detenerLocal;
 
-    // ===== GOOGLE CAST =====
+    // ===== 5. GOOGLE CAST SDK =====
     window['__onGCastApiAvailable'] = function(isAvailable) {
       if (isAvailable) inicializarCast();
     };
@@ -276,6 +349,7 @@
               castSession = null;
               castStatus.textContent = 'Sin conexión';
               castStatus.classList.remove('connected');
+              detenerLocal(); // Detener local si se desconecta el cast
               break;
           }
         }
@@ -288,22 +362,33 @@
         return;
       }
       if (!castSession) {
-        alert('Conecta tu Chromecast con el botón del encabezado');
+        alert('Conecta tu Chromecast usando el ícono en la parte superior derecha');
         return;
       }
 
       const mediaInfo = new chrome.cast.media.MediaInfo(canalActivo.url, 'application/x-mpegurl');
       const metadata = new chrome.cast.media.GenericMediaMetadata();
       metadata.title = canalActivo.nombre;
-      metadata.subtitle = `Canal ${canalActivo.numero}`;
+      metadata.subtitle = `Categoría: ${canalActivo.categoria}`;
+      // Opcional: si el canal tiene logo, se puede pasar a metadata.imageUrl
       mediaInfo.metadata = metadata;
 
       const request = new chrome.cast.media.LoadRequest(mediaInfo);
+      
       castSession.loadMedia(request).then(
-        () => console.log(`📡 Transmitiendo: ${canalActivo.nombre}`),
-        (err) => console.error('Error:', err)
+        () => {
+          console.log(`📡 Transmitiendo: ${canalActivo.nombre}`);
+          detenerLocal(); // Pausar el local para ahorrar recursos
+        },
+        (err) => {
+          console.error('Error al enviar a Chromecast:', err);
+          alert('Error al enviar. Es posible que este canal tenga restricciones CORS o de geo-bloqueo.');
+        }
       );
     };
+
+    // Iniciar carga al abrir la página
+    cargarCanales();
   </script>
 </body>
 </html>
